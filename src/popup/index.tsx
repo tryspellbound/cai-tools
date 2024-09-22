@@ -18,93 +18,11 @@ import { useAsyncEffect } from "use-async-effect"
 
 import { downloadChat } from "./downloadChat"
 import { downloadChatWithStyling } from "./downloadChatWithStyling"
+import { getChatContent } from "./getChatContent"
+import { hideBanner } from "./hideBanner"
+import type { Message } from "./Message"
 
-function openWebPage(url: string): Promise<chrome.tabs.Tab> {
-  return chrome.tabs.create({ url })
-}
-
-export interface Message {
-  content: string
-  title: string
-  visible: boolean
-  isBot: boolean
-}
-
-async function getChatContent(): Promise<{
-  elements: Message[] | undefined
-  characterInfo: { creator: string; characterTitle: string } | undefined
-  canonicalLink: string | undefined
-}> {
-  const [activeTab] = await chrome.tabs.query({
-    active: true,
-    currentWindow: true
-  })
-
-  if (activeTab.id === undefined) return undefined
-  const [result] = await chrome.scripting.executeScript({
-    target: { tabId: activeTab.id, allFrames: true },
-    world: "MAIN",
-    injectImmediately: true,
-    func: () => {
-      const getCharacterInfo = () => {
-        const creatorElement =
-          document.querySelector(
-            'a[href^="/public-profile/?"][href*="username="]'
-          ) ??
-          document.querySelector(
-            'a[href^="/profile/?"][href*="source="]'
-          )
-        if (!creatorElement) return null
-
-        // Go up two levels to find the parent container
-        const parentContainer = creatorElement.parentElement?.parentElement
-
-        // Look for the character title within this container
-        const characterTitleElement = parentContainer?.querySelector(
-          'div[style*="font-size: 16px"][style*="font-weight: 600"]'
-        )
-
-        return {
-          creator: creatorElement.textContent?.trim() || "",
-          characterTitle: characterTitleElement?.textContent?.trim() || ""
-        }
-      }
-      const getCanonicalLink = () => {
-        const linkElement = document.querySelector(
-          'link[rel="canonical"]'
-        ) as HTMLLinkElement
-        return linkElement?.href || ""
-      }
-      const characterInfo = getCharacterInfo()
-      const canonicalLink = getCanonicalLink()
-
-      const elements = Array.from(
-        document.querySelectorAll("div.swiper-no-swiping")
-      ).map((div) => {
-        const titleRoot = div?.previousElementSibling?.firstElementChild
-        const topLevelNode = div?.parentElement?.parentElement?.parentElement;
-        return {
-          content: div?.querySelector("[node]")?.textContent || "",
-          title: titleRoot?.firstChild?.textContent || "",
-          visible: topLevelNode?.classList.contains("swiper-slide") ? topLevelNode?.classList.contains("swiper-slide-active") : true,
-          isBot: titleRoot?.querySelector('[aria-label="AI Character"]') != null
-        }
-      })
-
-      return { elements, characterInfo, canonicalLink }
-    }
-  })
-
-  const { elements, characterInfo, canonicalLink } = result.result
-
-  if (chrome.runtime.lastError) {
-    console.error(chrome.runtime.lastError)
-    return undefined
-  }
-  return { elements, characterInfo, canonicalLink }
-}
-
-const CharacterAiContent: React.FC = () => {
+export const CharacterAiContent: React.FC = () => {
   const [messages, setMessages] = useState<Message[] | undefined>(undefined)
   const [characterInfo, setCharacterInfo] = useState<
     { creator: string; characterTitle: string } | undefined
@@ -119,10 +37,10 @@ const CharacterAiContent: React.FC = () => {
       setCanonicalLink(canonicalLink)
     })
   }, [])
-
+  hideBanner()
   const [downloadType, setDownloadType] = useState<"pretty" | "raw">("pretty")
   const download = () => {
-    if (downloadType === "apretty") {
+    if (downloadType === "pretty") {
       downloadChatWithStyling(
         characterInfo?.characterTitle,
         characterInfo?.creator
@@ -135,7 +53,13 @@ const CharacterAiContent: React.FC = () => {
       )
     }
   }
-  return (
+  const openImportCharacter = () => {
+    chrome.tabs.create({
+      url: `https://beta.tryspellbound.com/app/home?caiLink=${encodeURIComponent(canonicalLink)}#cai`
+    })
+  }
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  return messages && messages.length > 0 ? (
     <div className="flex flex-col gap-4">
       <Typography variant="h4">
         Found a chat with {characterInfo?.characterTitle} by{" "}
@@ -168,6 +92,41 @@ const CharacterAiContent: React.FC = () => {
       ) : (
         <Button disabled>No Messages Found On This Page</Button>
       )}
+      {!showConfirmation ? (
+        <Button onClick={() => setShowConfirmation(true)}>
+          Export Character
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-2 w-full items-center">
+          <Typography variant="h4">
+            This will export your character to a non-C.ai site, continue?
+            <br />
+            <Typography variant="small">
+              Note: This only works for public characters.
+            </Typography>
+          </Typography>
+          <div className="flex flex-row gap-2">
+            <Button
+              color="primary"
+              onClick={() => {
+                openImportCharacter()
+                setShowConfirmation(false)
+              }}>
+              Confirm
+            </Button>
+            <Button
+              color="destructive"
+              variant="destructive"
+              onClick={() => setShowConfirmation(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : (
+    <div className="flex flex-col gap-4">
+      <Typography variant="h4">On Character.ai, but no chat found</Typography>
     </div>
   )
 }
@@ -192,7 +151,11 @@ const Popup: React.FC = () => {
             className={`inline-block w-2 h-2 rounded-full ml-2 ${isCharacterAi ? "bg-green-500" : "hidden"}`}></span>
         </CardTitle>
 
-        {isCharacterAi && <CharacterAiContent />}
+        {isCharacterAi ? (
+          <CharacterAiContent />
+        ) : (
+          <Typography variant="small">Disabled: Not on Character.ai</Typography>
+        )}
       </CardContent>
     </Card>
   )

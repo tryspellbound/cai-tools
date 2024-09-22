@@ -1,3 +1,5 @@
+import { startDownload } from "./startDownload"
+
 export async function downloadChatWithStyling(
   characterName: string,
   creator: string
@@ -26,18 +28,24 @@ export async function downloadChatWithStyling(
         }
 
         const inlineImages = async (element: Element) => {
-          const images = element.querySelectorAll("img")
+          const imageCache = new Map<string, string>();
+          const images = element.querySelectorAll("img");
           for (let img of images) {
             try {
-              let bitmap = await createImageBitmap(img)
-              let canvas = document.createElement("canvas")
-              let ctx = canvas.getContext("2d")
-              canvas.width = bitmap.width
-              canvas.height = bitmap.height
-              ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height)
-              img.src = canvas.toDataURL("image/png")
+              const src = img.src;
+              if (!imageCache.has(src)) {
+                const response = await fetch(src);
+                const blob = await response.blob();
+                const base64 = await new Promise<string>((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                });
+                imageCache.set(src, base64);
+              }
+              img.src = imageCache.get(src)!;
             } catch (error) {
-              console.error("Failed to inline image:", error)
+              console.error("Failed to inline image:", error);
             }
           }
         }
@@ -104,25 +112,9 @@ export async function downloadChatWithStyling(
       </html>
     `
 
-    const blob = new Blob([fullHtml], { type: "text/html" })
-    const url = URL.createObjectURL(blob)
-
-    chrome.downloads.download(
-      {
-        url: url,
-        filename: `cai_${characterName}_${creator}_chat.html`,
-        saveAs: true
-      },
-      (downloadId) => {
-        if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError)
-        } else {
-          console.log("Download started with ID:", downloadId)
-        }
-        URL.revokeObjectURL(url)
-      }
-    )
+    startDownload(fullHtml, `${characterName}-${creator}-chat.html`, "text/html")
   } catch (error) {
     console.error("Error downloading chat with styling:", error)
   }
 }
+

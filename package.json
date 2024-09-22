@@ -1,8 +1,8 @@
 {
   "name": "character-ai-banner-extension",
-  "displayName": "Character ai banner extension",
+  "displayName": "Character AI Tools by Spellbound",
   "version": "0.0.1",
-  "description": "Save the old C.ai",
+  "description": "Save your C.ai content!",
   "author": "Spellbound (team@tryspellbound.com)",
   "scripts": {
     "dev": "plasmo dev",
@@ -80,7 +80,8 @@
       "downloads"
     ],
     "host_permissions": [
-      "https://*/*"
+      "https://old.character.ai/*"
     ]
+
   }
 }

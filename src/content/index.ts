@@ -1,3 +1,7 @@
+import type { PlasmoCSConfig } from "plasmo"
+
+console.log("Content script loaded C.ai")
+
 const observer = new MutationObserver((mutations) => {
   mutations.forEach(() => {
     const appPage = document.querySelector("div.apppage")
@@ -12,7 +16,11 @@ const observer = new MutationObserver((mutations) => {
   })
 })
 
-const targetNode = document.body
-const config = { childList: true, subtree: true }
-observer.observe(targetNode, config)
-console.log("Content script loaded C.ai")
+observer.observe(document.body, { childList: true, subtree: true })
+
+export {}
+
+export const config: PlasmoCSConfig = {
+  matches: ["https://old.character.ai/*"],
+  world: "MAIN"
+}
