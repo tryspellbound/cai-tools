@@ -13,6 +13,7 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Typography } from "@/components/ui/typography"
+import { ExternalLink } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useAsyncEffect } from "use-async-effect"
 
@@ -168,7 +169,16 @@ const Popup: React.FC = () => {
     <Card id="popup" className="m-1 p-8 h-[20rem] w-[40rem]">
       <CardContent>
         <CardTitle className="flex items-center my-2">
-          C.ai tools by Spellbound
+          <span className="flex items-center  group">
+            C.ai tools by&nbsp;
+            
+              <a href="https://tryspellbound.com">
+                <span className="flex items-center">
+                <u>Spellbound</u> &nbsp;<ExternalLink size={16} className="opacity-10 group-hover:opacity-100 transition-opacity duration-300"/>
+                </span>
+              </a>
+            
+          </span>
           <span
             className={`inline-block w-2 h-2 rounded-full ml-2 ${isCharacterAi ? "bg-green-500" : "hidden"}`}></span>
         </CardTitle>
