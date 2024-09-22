@@ -44,7 +44,7 @@ Just visit a page on **old** Character.ai with your existing account, and click 
 - [ ] Support exporting multiple chats at once (may be difficult to implement)
 
 
-## Why not <insert existing extension>?
+## Why not \<insert existing extension>?
 
 Chrome extensions are powerful. We believe there should be a *free* ***open-source*** extension that interfaces with C.ai.
 
