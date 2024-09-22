@@ -81,7 +81,11 @@
     ],
     "host_permissions": [
       "https://old.character.ai/*"
-    ]
-
+    ],
+    "browser_specific_settings": {
+      "gecko": {
+        "id": "$FIREFOX_EXT_ID"
+      }
+    }
   }
 }
