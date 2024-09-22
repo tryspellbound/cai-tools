@@ -16,41 +16,84 @@ import { Typography } from "@/components/ui/typography"
 import { useEffect, useState } from "react"
 import { useAsyncEffect } from "use-async-effect"
 
+import type { ChatInfo } from "./ChatInfo"
 import { downloadChat } from "./downloadChat"
 import { downloadChatWithStyling } from "./downloadChatWithStyling"
 import { getChatContent } from "./getChatContent"
 import { hideBanner } from "./hideBanner"
 import type { Message } from "./Message"
 
+export function ExportCharacterForm({
+  openImportCharacter,
+  chatInfo
+}: {
+  openImportCharacter: () => void
+  chatInfo: ChatInfo
+}) {
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  if (!showConfirmation) {
+    return (
+      <Button
+        onClick={() => setShowConfirmation(true)}
+        disabled={chatInfo.isPrivate}>
+        {chatInfo.isPrivate
+          ? "Can't export private characters"
+          : "Export Character"}
+      </Button>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-2 w-full items-center">
+      <Typography variant="h4">
+        This will export your character to a non-C.ai site, continue?
+        <br />
+        <Typography variant="small">
+          Note: This only works for public characters.
+        </Typography>
+      </Typography>
+      <div className="flex flex-row gap-2">
+        <Button
+          color="primary"
+          onClick={() => {
+            openImportCharacter()
+            setShowConfirmation(false)
+          }}>
+          Confirm
+        </Button>
+        <Button
+          color="destructive"
+          variant="destructive"
+          onClick={() => setShowConfirmation(false)}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export const CharacterAiContent: React.FC = () => {
   const [messages, setMessages] = useState<Message[] | undefined>(undefined)
-  const [characterInfo, setCharacterInfo] = useState<
-    { creator: string; characterTitle: string } | undefined
-  >(undefined)
+
+  const [chatInfo, setChatInfo] = useState<ChatInfo | undefined>(undefined)
   const [canonicalLink, setCanonicalLink] = useState<string | undefined>(
     undefined
   )
   useAsyncEffect(async () => {
-    getChatContent().then(({ elements, characterInfo, canonicalLink }) => {
-      setMessages(elements)
-      setCharacterInfo(characterInfo)
-      setCanonicalLink(canonicalLink)
-    })
+    getChatContent().then(
+      ({ elements, chatInfo: characterInfo, canonicalLink }) => {
+        setMessages(elements)
+        setChatInfo(characterInfo)
+        setCanonicalLink(canonicalLink)
+      }
+    )
   }, [])
   hideBanner()
   const [downloadType, setDownloadType] = useState<"pretty" | "raw">("pretty")
   const download = () => {
     if (downloadType === "pretty") {
-      downloadChatWithStyling(
-        characterInfo?.characterTitle,
-        characterInfo?.creator
-      )
+      downloadChatWithStyling(chatInfo?.characterTitle, chatInfo?.creator)
     } else {
-      downloadChat(
-        messages,
-        characterInfo?.characterTitle,
-        characterInfo?.creator
-      )
+      downloadChat(messages, chatInfo?.characterTitle, chatInfo?.creator)
     }
   }
   const openImportCharacter = () => {
@@ -58,13 +101,17 @@ export const CharacterAiContent: React.FC = () => {
       url: `https://beta.tryspellbound.com/app/home?caiLink=${encodeURIComponent(canonicalLink)}#cai`
     })
   }
-  const [showConfirmation, setShowConfirmation] = useState(false)
   return messages && messages.length > 0 ? (
     <div className="flex flex-col gap-4">
-      <Typography variant="h4">
-        Found a chat with {characterInfo?.characterTitle} by{" "}
-        {characterInfo?.creator}!
-      </Typography>
+      {chatInfo?.isRoom ? (
+        <Typography variant="h4">
+          Found a room named {chatInfo?.characterTitle}!
+        </Typography>
+      ) : (
+        <Typography variant="h4">
+          Found a chat with {chatInfo?.characterTitle} by {chatInfo?.creator}!
+        </Typography>
+      )}
 
       <div className="flex flex-row gap-2 items-center">
         <Typography variant="small">Download as:</Typography>
@@ -92,36 +139,11 @@ export const CharacterAiContent: React.FC = () => {
       ) : (
         <Button disabled>No Messages Found On This Page</Button>
       )}
-      {!showConfirmation ? (
-        <Button onClick={() => setShowConfirmation(true)}>
-          Export Character
-        </Button>
-      ) : (
-        <div className="flex flex-col gap-2 w-full items-center">
-          <Typography variant="h4">
-            This will export your character to a non-C.ai site, continue?
-            <br />
-            <Typography variant="small">
-              Note: This only works for public characters.
-            </Typography>
-          </Typography>
-          <div className="flex flex-row gap-2">
-            <Button
-              color="primary"
-              onClick={() => {
-                openImportCharacter()
-                setShowConfirmation(false)
-              }}>
-              Confirm
-            </Button>
-            <Button
-              color="destructive"
-              variant="destructive"
-              onClick={() => setShowConfirmation(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
+      {!chatInfo?.isRoom && (
+        <ExportCharacterForm
+          openImportCharacter={openImportCharacter}
+          chatInfo={chatInfo}
+        />
       )}
     </div>
   ) : (
